@@ -1,0 +1,25 @@
+# Credenciais locais
+.env
+.env.*
+!.env.example
+
+# Ambiente virtual e cache do Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Memória privada criada durante o uso
+memory/memory.json
+memory/*.tmp
+
+# Arquivos de IDE e sistema
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Artefatos locais
+*.log
+quadro_teste.png
