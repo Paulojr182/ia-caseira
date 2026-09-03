@@ -13,6 +13,20 @@ __pycache__/
 # Memória privada criada durante o uso
 memory/memory.json
 memory/*.tmp
+memory/teacher_progress.json
+logs/
+study/materials/*
+study/exams/*
+study/notes/*
+!study/materials/.gitkeep
+!study/exams/.gitkeep
+!study/notes/.gitkeep
+tests/runtime/*
+!tests/runtime/.gitkeep
+!tests/runtime/materials/
+!tests/runtime/exams/
+!tests/runtime/materials/.gitkeep
+!tests/runtime/exams/.gitkeep
 
 # Arquivos de IDE e sistema
 .vscode/

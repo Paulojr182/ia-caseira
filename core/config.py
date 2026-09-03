@@ -16,6 +16,19 @@ load_dotenv(PASTA_APLICATIVO / ".env")
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
+# Provedor principal OpenAI. A chave deve existir somente no arquivo .env.
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+OPENAI_MODEL_LUNA = os.getenv("OPENAI_MODEL_LUNA", "gpt-5.6-luna")
+OPENAI_MODEL_TERRA = os.getenv("OPENAI_MODEL_TERRA", "gpt-5.6-terra")
+OPENAI_MODEL_SOL = os.getenv("OPENAI_MODEL_SOL", "gpt-5.6-sol")
+OPENAI_MODEL_MODE = os.getenv("OPENAI_MODEL_MODE", "auto").strip().lower()
+if OPENAI_MODEL_MODE not in {"auto", "luna", "terra", "sol"}:
+    OPENAI_MODEL_MODE = "auto"
+
+OPENAI_STT_MODEL = os.getenv("OPENAI_STT_MODEL", "gpt-4o-mini-transcribe")
+OPENAI_TTS_MODEL = os.getenv("OPENAI_TTS_MODEL", "gpt-4o-mini-tts")
+OPENAI_TTS_VOICE = os.getenv("OPENAI_TTS_VOICE", "cedar")
+
 # Modelo usado pelo ALFRED
 GEMINI_LIVE_MODEL = "gemini-3.1-flash-live-preview"
 

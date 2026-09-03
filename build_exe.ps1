@@ -11,12 +11,16 @@ if (-not (Test-Path -LiteralPath $python)) {
     --onefile `
     --windowed `
     --name ALFRED `
-    --collect-all google.genai `
+    --collect-all openai `
     (Join-Path $PSScriptRoot "main_basic.py")
 
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot ".env.example") `
     -Destination (Join-Path $PSScriptRoot "dist\.env.example") -Force
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "README_EXECUTAVEL.txt") `
     -Destination (Join-Path $PSScriptRoot "dist\LEIA-ME.txt") -Force
+
+foreach ($pasta in @("memory", "logs", "study\materials", "study\exams", "study\notes")) {
+    New-Item -ItemType Directory -Path (Join-Path $PSScriptRoot "dist\$pasta") -Force | Out-Null
+}
 
 Write-Host "Executável criado em dist\ALFRED.exe"

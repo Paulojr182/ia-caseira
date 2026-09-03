@@ -15,7 +15,7 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from gemini.live_client_basic import GeminiLiveWorker
+from ai.voice_worker import OpenAIVoiceWorker
 from ui.content_panel import ContentPanel
 
 
@@ -59,6 +59,13 @@ QLabel#statusValor {
     color: #8b8589;
     font-family: "Consolas";
     font-size: 10px;
+}
+
+QLabel#modeloAtual {
+    color: #a18e92;
+    font-family: "Consolas";
+    font-size: 9px;
+    letter-spacing: 1px;
 }
 
 QLabel#tituloRegistro {
@@ -327,6 +334,7 @@ class MainWindow(QMainWindow):
         self.btn_chamada.setObjectName("botaoChamada")
         self.btn_tela = QPushButton("▣  ANALISAR TELA")
         self.btn_camera = QPushButton("◉  ANALISAR CÂMERA")
+        self.btn_professor = QPushButton("▣  MODO PROFESSOR")
 
         registro_titulo = QLabel("EVENT STREAM")
         registro_titulo.setObjectName("tituloRegistro")
@@ -343,6 +351,7 @@ class MainWindow(QMainWindow):
         lateral.addWidget(self.btn_chamada)
         lateral.addWidget(self.btn_tela)
         lateral.addWidget(self.btn_camera)
+        lateral.addWidget(self.btn_professor)
         lateral.addSpacing(7)
         lateral.addWidget(registro_titulo)
         lateral.addWidget(self.log_box, 1)
@@ -360,6 +369,10 @@ class MainWindow(QMainWindow):
         self.status_valor = QLabel("○  OFFLINE")
         self.status_valor.setObjectName("statusValor")
         self.status_valor.setAlignment(Qt.AlignCenter)
+
+        self.modelo_atual = QLabel("MODELO: —")
+        self.modelo_atual.setObjectName("modeloAtual")
+        self.modelo_atual.setAlignment(Qt.AlignCenter)
 
         self.nucleo = NeuralCoreWidget()
         self.painel_conteudo = ContentPanel()
@@ -392,6 +405,7 @@ class MainWindow(QMainWindow):
 
         central.addWidget(titulo_alfred)
         central.addWidget(self.status_valor)
+        central.addWidget(self.modelo_atual)
         central.addWidget(self.stack, 1)
         central.addWidget(painel_transcricao)
 
@@ -402,6 +416,7 @@ class MainWindow(QMainWindow):
         self.btn_chamada.clicked.connect(self.alternar_chamada)
         self.btn_tela.clicked.connect(self.analisar_tela)
         self.btn_camera.clicked.connect(self.analisar_camera)
+        self.btn_professor.clicked.connect(self.abrir_modo_professor)
 
     def escrever_log(self, texto):
         self.log_box.append(f"> {texto}")
@@ -450,7 +465,7 @@ class MainWindow(QMainWindow):
         self._alfred_finalizado = True
         self.transcricao_box.clear()
 
-        self.live_worker = GeminiLiveWorker()
+        self.live_worker = OpenAIVoiceWorker()
         self.live_worker.status_recebido.connect(self.atualizar_status)
         self.live_worker.erro_recebido.connect(self.mostrar_erro)
         self.live_worker.chamada_encerrada.connect(self.chamada_finalizada)
@@ -462,7 +477,13 @@ class MainWindow(QMainWindow):
         self.live_worker.transcricao_recebida.connect(
             self.atualizar_transcricao
         )
+        self.live_worker.modelo_alterado.connect(
+            self.atualizar_modelo
+        )
         self.live_worker.start()
+
+    def atualizar_modelo(self, modelo):
+        self.modelo_atual.setText(f"MODELO: {str(modelo).upper()}")
 
     @staticmethod
     def _juntar_transcricao(atual, trecho):
@@ -563,7 +584,16 @@ class MainWindow(QMainWindow):
         self.escrever_log("Solicitando análise da câmera...")
         self.live_worker.solicitar_analise_camera()
 
+    def abrir_modo_professor(self):
+        self.stack.setCurrentWidget(self.painel_conteudo)
+        self.escrever_log("Modo Professor aberto. Diga o que deseja estudar.")
+
     def mostrar_conteudo_visual(self, conteudo):
+        if conteudo.get("action") == "clear":
+            self.painel_conteudo.mostrar_boas_vindas()
+            self.stack.setCurrentWidget(self.painel_conteudo)
+            self.escrever_log("Quadro limpo.")
+            return
         self.painel_conteudo.mostrar_conteudo(conteudo)
         self.stack.setCurrentWidget(self.painel_conteudo)
         self.escrever_log("Painel educacional atualizado.")

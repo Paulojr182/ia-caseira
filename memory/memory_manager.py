@@ -23,10 +23,12 @@ from pathlib import Path
 # ler ou alterar o arquivo de memória ao mesmo tempo.
 from threading import Lock
 
+from core.config import PASTA_APLICATIVO
+
 
 # Localiza a pasta onde este arquivo Python está salvo.
 # Essa pasta será usada como base para o arquivo memory.json.
-PASTA_MEMORIA = Path(__file__).resolve().parent
+PASTA_MEMORIA = PASTA_APLICATIVO / "memory"
 # Monta o caminho completo do arquivo de memória.
 ARQUIVO_MEMORIA = PASTA_MEMORIA / "memory.json"
 
