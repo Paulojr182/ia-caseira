@@ -23,3 +23,6 @@ Thumbs.db
 # Artefatos locais
 *.log
 quadro_teste.png
+build/
+dist/
+*.spec

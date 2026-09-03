@@ -31,3 +31,21 @@ python main_basic.py
 ```
 
 O arquivo `.env`, o ambiente virtual e as memórias pessoais ficam somente no computador do usuário e não são enviados ao repositório.
+
+## Comandos de pesquisa
+
+O Alfred também pode abrir pesquisas no navegador. Exemplos:
+
+- “Alfred, pesquise inteligência artificial no navegador.”
+- “Alfred, pesquise fotossíntese e depois dê uma aula detalhada no quadro.”
+
+## Gerar o executável
+
+Com o ambiente virtual ativo e o PyInstaller instalado, execute:
+
+```powershell
+python -m pip install pyinstaller
+.\build_exe.ps1
+```
+
+O pacote será criado em `dist`. No outro computador, coloque um arquivo `.env` com a chave da API Gemini ao lado de `ALFRED.exe`.

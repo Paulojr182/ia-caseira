@@ -4,6 +4,7 @@ import os
 import subprocess
 import unicodedata
 import webbrowser
+from urllib.parse import urlencode
 
 
 APLICATIVOS_PERMITIDOS = {
@@ -70,4 +71,33 @@ def abrir_aplicativo(nome):
         return {
             "sucesso": False,
             "mensagem": f"Não foi possível abrir {nome}: {erro}",
+        }
+
+
+def pesquisar_no_navegador(tema):
+    """Abre uma pesquisa segura no navegador padrão do Windows."""
+    tema = " ".join(str(tema).split()).strip()
+    if not tema:
+        return {
+            "sucesso": False,
+            "mensagem": "Informe um tema para pesquisar.",
+        }
+
+    # Evita URLs exageradamente grandes sem alterar o sentido da consulta.
+    tema = tema[:300]
+    url = "https://www.google.com/search?" + urlencode({"q": tema})
+
+    try:
+        if not webbrowser.open(url, new=2):
+            raise RuntimeError("O navegador padrão não respondeu.")
+        return {
+            "sucesso": True,
+            "tema": tema,
+            "mensagem": f"Pesquisa por '{tema}' aberta no navegador.",
+        }
+    except (OSError, RuntimeError) as erro:
+        return {
+            "sucesso": False,
+            "tema": tema,
+            "mensagem": f"Não foi possível pesquisar '{tema}': {erro}",
         }

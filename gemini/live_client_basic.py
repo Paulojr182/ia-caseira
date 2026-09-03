@@ -31,7 +31,7 @@ from core.config import (
     GEMINI_LIVE_MODEL,
     GEMINI_VOICE,
 )
-from core.local_actions import abrir_aplicativo
+from core.local_actions import abrir_aplicativo, pesquisar_no_navegador
 
 # Função responsável por capturar a tela e retornar a imagem em bytes.
 from vision.screen_capture import capturar_tela_bytes
@@ -258,6 +258,33 @@ class GeminiLiveWorker(QThread):
                     ),
 
                     types.FunctionDeclaration(
+                        name="pesquisar_no_navegador",
+                        description=(
+                            "Abre o navegador padrão e pesquisa no Google o tema informado. "
+                            "Use quando o usuário pedir para pesquisar, procurar ou buscar "
+                            "algo na internet. Se ele também pedir uma explicação ou aula, "
+                            "marque explicacao_detalhada como true."
+                        ),
+                        parameters=types.Schema(
+                            type="OBJECT",
+                            properties={
+                                "tema": types.Schema(
+                                    type="STRING",
+                                    description="Consulta que será pesquisada no navegador.",
+                                ),
+                                "explicacao_detalhada": types.Schema(
+                                    type="BOOLEAN",
+                                    description=(
+                                        "True quando, além de pesquisar, o usuário quiser "
+                                        "uma aula detalhada no quadro."
+                                    ),
+                                ),
+                            },
+                            required=["tema", "explicacao_detalhada"],
+                        ),
+                    ),
+
+                    types.FunctionDeclaration(
                         name="mostrar_conteudo_visual",
                         description=(
                             "Monta uma explicação em um quadro de sala de aula na interface. "
@@ -411,6 +438,11 @@ class GeminiLiveWorker(QThread):
             # CONTROLE LOCAL SEGURO
             "Você pode abrir aplicativos usando abrir_aplicativo. "
             "Use essa função apenas quando o usuário pedir explicitamente. "
+            "Você pode pesquisar um tema no Google usando pesquisar_no_navegador. "
+            "Quando o usuário pedir apenas a pesquisa, abra os resultados e confirme. "
+            "Quando ele pedir para pesquisar e também explicar, marque explicacao_detalhada "
+            "como verdadeira e, depois da pesquisa, monte uma aula usando "
+            "mostrar_conteudo_visual. "
             "Somente calculadora, bloco de notas, explorador de arquivos, Paint, "
             "configurações e navegador estão autorizados. "
             "Você não pode executar comandos de terminal, excluir arquivos, "
@@ -734,6 +766,8 @@ class GeminiLiveWorker(QThread):
         encerrar_depois = False
         # Indica que o quadro precisa ser seguido por explicação em áudio.
         garantir_fala_depois = False
+        # Continua no modo professor quando a pesquisa também solicitar uma aula.
+        pesquisa_com_aula = False
 
         # Uma mesma resposta pode conter uma ou mais chamadas de função.
         for chamada in tool_call.function_calls:
@@ -799,6 +833,16 @@ class GeminiLiveWorker(QThread):
                 resultado = abrir_aplicativo(
                     aplicativo
                 )
+
+            elif nome == "pesquisar_no_navegador":
+                tema = args.get("tema", "")
+                explicar = bool(args.get("explicacao_detalhada", False))
+
+                self.status_recebido.emit(
+                    f"Pesquisando {tema} no navegador..."
+                )
+                resultado = pesquisar_no_navegador(tema)
+                pesquisa_com_aula = pesquisa_com_aula or explicar
 
             elif nome == "mostrar_conteudo_visual":
                 conteudo = {
@@ -877,6 +921,17 @@ class GeminiLiveWorker(QThread):
                     "alerte sobre os erros comuns e termine com uma síntese e uma pergunta "
                     "para verificar se o aluno compreendeu. Não apenas leia o quadro e não "
                     "termine depois de uma frase curta."
+                )
+            )
+        elif pesquisa_com_aula:
+            self.status_recebido.emit(
+                "Preparando aula detalhada sobre a pesquisa..."
+            )
+            await sessao.send_realtime_input(
+                text=(
+                    "A pesquisa já foi aberta no navegador. Agora chame obrigatoriamente "
+                    "mostrar_conteudo_visual para montar uma aula completa sobre o tema "
+                    "pesquisado. Depois do quadro, explique tudo detalhadamente por voz."
                 )
             )
 
