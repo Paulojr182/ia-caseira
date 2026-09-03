@@ -87,6 +87,9 @@ class GeminiLiveWorker(QThread):
     # Envia conteúdo educacional estruturado para o painel visual.
     conteudo_visual_recebido = Signal(dict)
 
+    # Envia legendas em tempo real: papel, texto, finalizada e substituição.
+    transcricao_recebida = Signal(str, str, bool, bool)
+
     # Solicita que a interface encerre a chamada
     # usando o mesmo método acionado pelo botão.
     # Sinal emitido quando o usuário pede para encerrar a chamada por voz.
@@ -511,6 +514,14 @@ class GeminiLiveWorker(QThread):
                 "AUDIO"
             ],
 
+            # Gera legendas tanto do microfone quanto da voz do ALFRED.
+            input_audio_transcription=types.AudioTranscriptionConfig(
+                language_codes=["pt-BR"],
+            ),
+            output_audio_transcription=types.AudioTranscriptionConfig(
+                language_codes=["pt-BR"],
+            ),
+
             # Reduz o intervalo entre o fim da pergunta e o início da resposta.
             realtime_input_config=types.RealtimeInputConfig(
                 automatic_activity_detection=types.AutomaticActivityDetection(
@@ -726,6 +737,43 @@ class GeminiLiveWorker(QThread):
             async for resposta in sessao.receive():
                 if not self.ativo:
                     break
+
+                conteudo_servidor = resposta.server_content
+                if conteudo_servidor:
+                    # O texto interino é cumulativo e substitui a legenda atual.
+                    entrada_interina = (
+                        conteudo_servidor.interim_input_transcription
+                    )
+                    if entrada_interina and entrada_interina.text:
+                        self.transcricao_recebida.emit(
+                            "usuario",
+                            entrada_interina.text,
+                            bool(entrada_interina.finished),
+                            True,
+                        )
+
+                    entrada_final = conteudo_servidor.input_transcription
+                    if entrada_final and entrada_final.text:
+                        self.transcricao_recebida.emit(
+                            "usuario",
+                            entrada_final.text,
+                            bool(entrada_final.finished),
+                            True,
+                        )
+
+                    saida = conteudo_servidor.output_transcription
+                    if saida and saida.text:
+                        self.transcricao_recebida.emit(
+                            "alfred",
+                            saida.text,
+                            bool(saida.finished),
+                            False,
+                        )
+
+                    if conteudo_servidor.turn_complete:
+                        self.transcricao_recebida.emit(
+                            "alfred", "", True, False
+                        )
 
                 # Quando chega o primeiro bloco de resposta, bloqueia
                 # imediatamente o microfone antes mesmo da reprodução.

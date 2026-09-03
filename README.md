@@ -2,6 +2,8 @@
 
 Assistente pessoal para Windows com conversa por voz usando Gemini Live, análise de tela e câmera, memória local e um quadro visual para explicações no modo professor.
 
+Durante a conversa, a interface mostra a transcrição ao vivo do que o usuário diz e também da resposta falada pelo Alfred.
+
 ## Preparação
 
 1. Instale Python 3.11 ou mais recente.

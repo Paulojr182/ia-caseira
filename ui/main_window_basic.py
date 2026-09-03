@@ -8,6 +8,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMainWindow,
     QPushButton,
+    QPlainTextEdit,
     QStackedWidget,
     QTextEdit,
     QVBoxLayout,
@@ -114,6 +115,29 @@ QTextEdit#registro {
     padding: 10px;
     font-family: "Consolas";
     font-size: 9px;
+    selection-background-color: #8f1428;
+}
+
+QFrame#painelTranscricao {
+    background-color: #07070a;
+    border: 1px solid #4a1018;
+    border-radius: 11px;
+}
+
+QLabel#tituloTranscricao {
+    color: #9b969b;
+    font-family: "Consolas";
+    font-size: 9px;
+    letter-spacing: 1px;
+}
+
+QPlainTextEdit#transcricao {
+    color: #e8e3e5;
+    background: transparent;
+    border: 0;
+    font-family: "Segoe UI";
+    font-size: 12px;
+    padding: 0 8px 5px 8px;
     selection-background-color: #8f1428;
 }
 
@@ -270,6 +294,10 @@ class MainWindow(QMainWindow):
         self.setMinimumSize(900, 620)
         self.resize(1160, 780)
         self.live_worker = None
+        self._transcricao_usuario = ""
+        self._transcricao_alfred = ""
+        self._usuario_finalizado = True
+        self._alfred_finalizado = True
         self.setStyleSheet(ESTILO_GLOBAL)
         self._criar_interface()
 
@@ -344,9 +372,28 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.painel_conteudo)
         self.stack.setCurrentWidget(self.nucleo)
 
+        painel_transcricao = QFrame()
+        painel_transcricao.setObjectName("painelTranscricao")
+        painel_transcricao.setFixedHeight(112)
+        layout_transcricao = QVBoxLayout(painel_transcricao)
+        layout_transcricao.setContentsMargins(9, 6, 9, 5)
+        layout_transcricao.setSpacing(2)
+
+        titulo_transcricao = QLabel("TRANSCRIÇÃO AO VIVO")
+        titulo_transcricao.setObjectName("tituloTranscricao")
+        self.transcricao_box = QPlainTextEdit()
+        self.transcricao_box.setObjectName("transcricao")
+        self.transcricao_box.setReadOnly(True)
+        self.transcricao_box.setPlaceholderText(
+            "O que você e o Alfred disserem aparecerá aqui."
+        )
+        layout_transcricao.addWidget(titulo_transcricao)
+        layout_transcricao.addWidget(self.transcricao_box, 1)
+
         central.addWidget(titulo_alfred)
         central.addWidget(self.status_valor)
         central.addWidget(self.stack, 1)
+        central.addWidget(painel_transcricao)
 
         layout_raiz.addWidget(painel_lateral)
         layout_raiz.addWidget(painel_central, 1)
@@ -397,6 +444,11 @@ class MainWindow(QMainWindow):
         self.btn_chamada.style().polish(self.btn_chamada)
         self.definir_status("CONECTANDO")
         self.escrever_log("Iniciando conexão...")
+        self._transcricao_usuario = ""
+        self._transcricao_alfred = ""
+        self._usuario_finalizado = True
+        self._alfred_finalizado = True
+        self.transcricao_box.clear()
 
         self.live_worker = GeminiLiveWorker()
         self.live_worker.status_recebido.connect(self.atualizar_status)
@@ -407,7 +459,71 @@ class MainWindow(QMainWindow):
         self.live_worker.conteudo_visual_recebido.connect(
             self.mostrar_conteudo_visual
         )
+        self.live_worker.transcricao_recebida.connect(
+            self.atualizar_transcricao
+        )
         self.live_worker.start()
+
+    @staticmethod
+    def _juntar_transcricao(atual, trecho):
+        atual = str(atual).strip()
+        trecho = str(trecho).strip()
+        if not trecho:
+            return atual
+        if not atual or trecho.startswith(atual):
+            return trecho
+        if atual.endswith(trecho):
+            return atual
+        separador = "" if trecho[:1] in ".,;:!?" else " "
+        return atual + separador + trecho
+
+    def atualizar_transcricao(self, papel, texto, finalizada, substituir):
+        texto = str(texto).strip()
+        if not texto and finalizada:
+            if papel == "usuario":
+                self._usuario_finalizado = True
+            else:
+                self._alfred_finalizado = True
+            return
+
+        if papel == "usuario":
+            if self._usuario_finalizado:
+                self._transcricao_usuario = ""
+                self._usuario_finalizado = False
+            if substituir:
+                self._transcricao_usuario = str(texto).strip()
+            else:
+                self._transcricao_usuario = self._juntar_transcricao(
+                    self._transcricao_usuario, texto
+                )
+            self._usuario_finalizado = bool(finalizada)
+        else:
+            if self._alfred_finalizado:
+                self._transcricao_alfred = ""
+                self._alfred_finalizado = False
+            if substituir:
+                self._transcricao_alfred = str(texto).strip()
+            else:
+                self._transcricao_alfred = self._juntar_transcricao(
+                    self._transcricao_alfred, texto
+                )
+            self._alfred_finalizado = bool(finalizada)
+
+        # Mantém a legenda leve mesmo durante explicações muito longas.
+        limite = 3000
+        if len(self._transcricao_usuario) > limite:
+            self._transcricao_usuario = "…" + self._transcricao_usuario[-limite:]
+        if len(self._transcricao_alfred) > limite:
+            self._transcricao_alfred = "…" + self._transcricao_alfred[-limite:]
+
+        linhas = []
+        if self._transcricao_usuario:
+            linhas.append(f"VOCÊ: {self._transcricao_usuario}")
+        if self._transcricao_alfred:
+            linhas.append(f"ALFRED: {self._transcricao_alfred}")
+        self.transcricao_box.setPlainText("\n\n".join(linhas))
+        barra = self.transcricao_box.verticalScrollBar()
+        barra.setValue(barra.maximum())
 
     def encerrar_chamada(self):
         if self.live_worker:
